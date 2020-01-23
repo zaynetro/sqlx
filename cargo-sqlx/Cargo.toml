@@ -1,0 +1,8 @@
+[package]
+name = "cargo-sqlx"
+version = "0.1.0"
+authors = ["Austin Bonander <austin.bonander@gmail.com>"] # austin@launchbadge.com
+edition = "2018"
+
+[dependencies]
+sqlx = "../"
