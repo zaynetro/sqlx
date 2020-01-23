@@ -1,8 +1,20 @@
 [package]
 name = "cargo-sqlx"
-version = "0.1.0"
-authors = ["Austin Bonander <austin.bonander@gmail.com>"] # austin@launchbadge.com
+version = "0.0.1"
+
+description = "Cargo subcommands for SQLx, the Rust SQL tookit."
+
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/launchbadge/sqlx"
 edition = "2018"
+keywords = [ "database", "sql", "async", "await" ]
+categories = [ "database", "asynchronous" ]
+authors = [
+    "Ryan Leckey <leckey.ryan@gmail.com>", # ryan@launchbadge.com
+    "Austin Bonander <austin.bonander@gmail.com>", # austin@launchbadge.com
+    "Zachery Gyurkovitz <zgyurkovitz@gmail.com>", # zach@launchbadge.com
+    "Daniel Akhterov <akhterovd@gmail.com>", # daniel@launchbadge.com
+]
 
 [dependencies]
-sqlx = "../"
+sqlx = { version = "0.2", path = "../" }
