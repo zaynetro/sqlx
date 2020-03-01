@@ -74,3 +74,5 @@ pub use mysql::MySql;
 #[cfg_attr(docsrs, doc(cfg(feature = "postgres")))]
 #[doc(inline)]
 pub use postgres::Postgres;
+
+pub mod binxml;
