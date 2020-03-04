@@ -12,9 +12,10 @@ pub struct XmlDecl<'a> {
 
 impl<'a> DecodeBinXml<'a> for XmlDecl<'a> {
     fn decode_xml(mut buf: &'a [u8]) -> Result<Self> {
-        if buf.next() != XML_DECL_TOKEN {
+        if buf[0] != XML_DECL_TOKEN {
             return Err(protocol_err!("Expected XMLDECL_TOKEN, got: {:?}", buf[0]).into());
         }
+        buf.advance(1);
 
         let textdata1 = TextData::<'a>::decode_xml(&mut &buf[0..])?;
 
