@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports)]
 #![recursion_limit = "256"]
 #![forbid(unsafe_code)]
 #![cfg_attr(docsrs, feature(doc_cfg))]

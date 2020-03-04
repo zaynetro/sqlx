@@ -3,6 +3,8 @@ use memchr::memchr;
 use std::{io, slice, str};
 
 pub trait Buf {
+    fn next(&mut self) -> u8;
+
     fn advance(&mut self, cnt: usize);
 
     fn get_uint<T: ByteOrder>(&mut self, n: usize) -> io::Result<u64>;
@@ -29,6 +31,12 @@ pub trait Buf {
 }
 
 impl<'a> Buf for &'a [u8] {
+    fn next(&mut self) -> u8 {
+        let byte = self[0];
+        self.advance(1);
+        byte
+    }
+
     fn advance(&mut self, cnt: usize) {
         *self = &self[cnt..];
     }
