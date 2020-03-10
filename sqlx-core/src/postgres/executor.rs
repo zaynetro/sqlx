@@ -35,8 +35,6 @@ impl PgConnection {
                 param_types: &*args.types,
             });
 
-            self.cache_statement.insert(query.into(), id);
-
             id
         }
     }
@@ -133,6 +131,20 @@ impl PgConnection {
         self.stream.flush().await?;
         self.is_ready = false;
 
+        // only cache
+        if let Some(statement) = statement {
+            // prefer redundant lookup to copying the query string
+            if !self.cache_statement.contains_key(query) {
+                loop {
+                    // wait for `ParseComplete` on the stream or the error before we cache the statement
+                    if let Message::ParseComplete = self.stream.read().await? {
+                        self.cache_statement.insert(query.into(), statement);
+                        break;
+                    }
+                }
+            }
+        }
+
         Ok(statement)
     }
 
@@ -142,7 +154,7 @@ impl PgConnection {
     ) -> crate::Result<Describe<Postgres>> {
         self.is_ready = false;
 
-        let statement = self.write_prepare(query, &Default::default());
+        let statement = self.write_prepare(query, &Default::default()).await?;
 
         self.write_describe(protocol::Describe::Statement(statement));
         self.write_sync();

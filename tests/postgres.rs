@@ -143,6 +143,24 @@ async fn pool_smoke_test() -> anyhow::Result<()> {
 
 #[cfg_attr(feature = "runtime-async-std", async_std::test)]
 #[cfg_attr(feature = "runtime-tokio", tokio::test)]
+async fn test_invalid_query() -> anyhow::Result<()> {
+    let mut conn = connect().await?;
+
+    conn.execute("definitely not a correct query")
+        .await
+        .unwrap_err();
+
+    let mut cursor = conn.fetch("select 1");
+
+    let row = cursor.next().await?.unwrap();
+
+    assert_eq!(row.get::<i32>(), 1i32);
+
+    Ok(())
+}
+
+#[cfg_attr(feature = "runtime-async-std", async_std::test)]
+#[cfg_attr(feature = "runtime-tokio", tokio::test)]
 async fn test_describe() -> anyhow::Result<()> {
     let mut conn = connect().await?;
 
