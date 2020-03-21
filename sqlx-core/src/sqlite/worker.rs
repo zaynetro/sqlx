@@ -42,9 +42,8 @@ impl Worker {
 
     pub(crate) async fn run<F, R>(&mut self, f: F) -> R
     where
-        F: Send + 'static,
         R: Send + 'static,
-        F: FnOnce() -> R,
+        F: FnOnce() -> R + Send + 'static,
     {
         let (sender, receiver) = oneshot::channel::<R>();
 

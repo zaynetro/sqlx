@@ -37,8 +37,7 @@ impl<'de> PgSequenceDecoder<'de> {
 
     pub(crate) fn decode<T>(&mut self) -> crate::Result<Postgres, Option<T>>
     where
-        T: DecodeOwned<Postgres>,
-        T: Type<Postgres>,
+        T: DecodeOwned<Postgres> + Type<Postgres>,
     {
         match self.value {
             PgValue::Binary(ref mut buf) => {

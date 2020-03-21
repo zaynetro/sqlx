@@ -1,12 +1,25 @@
 //! Core of SQLx, the rust SQL toolkit. Not intended to be used directly.
-
+#![recursion_limit = "512"]
 // When compiling with support for SQLite we must allow some unsafe code in order to
 // interface with the inherently unsafe C module. This unsafe code is contained
 // to the sqlite module.
 #![cfg_attr(feature = "sqlite", deny(unsafe_code))]
 #![cfg_attr(not(feature = "sqlite"), forbid(unsafe_code))]
-#![recursion_limit = "512"]
+// When compiling for docs.rs, we want to use a nightly-only feature to annotate
+// certain areas as requiring feature flags to use
 #![cfg_attr(docsrs, feature(doc_cfg))]
+// Clippy
+#![warn(clippy::pedantic)]
+#![allow(
+    clippy::cast_sign_loss,
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    clippy::must_use_candidate,
+    clippy::doc_markdown,
+    clippy::if_same_then_else,
+    clippy::never_loop,
+    clippy::missing_errors_doc
+)]
 
 #[macro_use]
 pub mod error;

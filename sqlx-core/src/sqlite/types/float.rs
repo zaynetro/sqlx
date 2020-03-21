@@ -30,7 +30,7 @@ impl Type<Sqlite> for f64 {
 
 impl Encode<Sqlite> for f64 {
     fn encode(&self, values: &mut Vec<SqliteArgumentValue>) {
-        values.push(SqliteArgumentValue::Double((*self).into()));
+        values.push(SqliteArgumentValue::Double(*self));
     }
 }
 

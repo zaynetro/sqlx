@@ -17,7 +17,7 @@ use crate::sqlite::Sqlite;
 use crate::sqlite::SqliteError;
 use crate::sqlite::{SqliteArguments, SqliteConnection};
 
-/// Return values from [SqliteStatement::step].
+/// Return values from [`SqliteStatement::step`].
 pub(super) enum Step {
     /// The statement has finished executing successfully.
     Done,
@@ -26,7 +26,7 @@ pub(super) enum Step {
     Row,
 }
 
-/// Thin wrapper around [sqlite3_stmt] to impl `Send`.
+/// Thin wrapper around `sqlite3_stmt` to impl `Send`.
 #[derive(Clone, Copy)]
 pub(super) struct SqliteStatementHandle(NonNull<sqlite3_stmt>);
 

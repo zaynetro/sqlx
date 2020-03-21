@@ -10,8 +10,7 @@ use crate::types::Type;
 
 impl<T> Encode<Postgres> for [T]
 where
-    T: Encode<Postgres>,
-    T: Type<Postgres>,
+    T: Encode<Postgres> + Type<Postgres>,
 {
     fn encode(&self, buf: &mut Vec<u8>) {
         let mut encoder = PgArrayEncoder::new(buf);
@@ -26,8 +25,7 @@ where
 
 impl<T> Encode<Postgres> for Vec<T>
 where
-    T: Encode<Postgres>,
-    T: Type<Postgres>,
+    T: Encode<Postgres> + Type<Postgres>,
 {
     fn encode(&self, buf: &mut Vec<u8>) {
         self.as_slice().encode(buf)
@@ -36,10 +34,8 @@ where
 
 impl<'de, T> Decode<'de, Postgres> for Vec<T>
 where
-    T: 'de,
-    T: DecodeOwned<Postgres>,
+    T: 'de + DecodeOwned<Postgres> + Type<Postgres>,
     [T]: Type<Postgres>,
-    T: Type<Postgres>,
 {
     fn decode(value: Option<PgValue<'de>>) -> crate::Result<Postgres, Self> {
         PgArrayDecoder::<T>::new(value)?.collect()

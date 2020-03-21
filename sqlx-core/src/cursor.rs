@@ -34,6 +34,7 @@ where
         E: Execute<'q, Self::Database>;
 
     /// Fetch the next row in the result. Returns `None` if there are no more rows.
+    #[allow(clippy::type_complexity)]
     fn next<'cur>(
         &'cur mut self,
     ) -> BoxFuture<'cur, crate::Result<Self::Database, Option<<Self::Database as HasRow<'cur>>::Row>>>;

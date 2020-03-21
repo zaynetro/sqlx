@@ -20,8 +20,7 @@ pub(crate) struct PgArrayEncoder<'enc, T> {
 
 impl<'enc, T> PgArrayEncoder<'enc, T>
 where
-    T: Encode<Postgres>,
-    T: Type<Postgres>,
+    T: Encode<Postgres> + Type<Postgres>,
 {
     pub(crate) fn new(buf: &'enc mut Vec<u8>) -> Self {
         let ty = <T as Type<Postgres>>::type_info();
@@ -91,8 +90,7 @@ pub(crate) struct PgArrayDecoder<'de, T> {
 
 impl<'de, T> PgArrayDecoder<'de, T>
 where
-    T: DecodeOwned<Postgres>,
-    T: Type<Postgres>,
+    T: DecodeOwned<Postgres> + Type<Postgres>,
 {
     pub(crate) fn new(value: Option<PgValue<'de>>) -> crate::Result<Postgres, Self> {
         let mut value = value.try_into()?;
@@ -157,9 +155,7 @@ where
 
 impl<'de, T> Iterator for PgArrayDecoder<'de, T>
 where
-    T: 'de,
-    T: DecodeOwned<Postgres>,
-    T: Type<Postgres>,
+    T: 'de + DecodeOwned<Postgres> + Type<Postgres>,
 {
     type Item = crate::Result<Postgres, T>;
 

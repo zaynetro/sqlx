@@ -113,8 +113,8 @@ impl Decode<'_, Postgres> for PgNumeric {
         if let PgValue::Binary(bytes) = value.try_into()? {
             Self::from_bytes(bytes)
         } else {
-            Err(Error::Decode(
-                format!("`PgNumeric` can only be decoded from the binary protocol").into(),
+            Err(decode_err!(
+                "`PgNumeric` can only be decoded from the binary protocol",
             ))
         }
     }

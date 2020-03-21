@@ -154,7 +154,7 @@ where
         Ok(pool)
     }
 
-    pub(super) async fn acquire<'s>(&'s self) -> crate::Result<C::Database, Floating<'s, Live<C>>> {
+    pub(super) async fn acquire(&self) -> crate::Result<C::Database, Floating<'_, Live<C>>> {
         let start = Instant::now();
         let deadline = start + self.options.connect_timeout;
 

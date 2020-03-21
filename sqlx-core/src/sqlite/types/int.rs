@@ -12,7 +12,7 @@ impl Type<Sqlite> for i32 {
 
 impl Encode<Sqlite> for i32 {
     fn encode(&self, values: &mut Vec<SqliteArgumentValue>) {
-        values.push(SqliteArgumentValue::Int((*self).into()));
+        values.push(SqliteArgumentValue::Int(*self));
     }
 }
 
@@ -30,7 +30,7 @@ impl Type<Sqlite> for i64 {
 
 impl Encode<Sqlite> for i64 {
     fn encode(&self, values: &mut Vec<SqliteArgumentValue>) {
-        values.push(SqliteArgumentValue::Int64((*self).into()));
+        values.push(SqliteArgumentValue::Int64(*self));
     }
 }
 

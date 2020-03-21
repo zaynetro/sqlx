@@ -78,8 +78,7 @@ impl<'de> PgRecordDecoder<'de> {
     #[inline]
     pub fn decode<T>(&mut self) -> crate::Result<Postgres, T>
     where
-        T: DecodeOwned<Postgres>,
-        T: Type<Postgres>,
+        T: DecodeOwned<Postgres> + Type<Postgres>,
     {
         self.0
             .decode()?

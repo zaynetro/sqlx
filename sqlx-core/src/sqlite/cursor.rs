@@ -11,6 +11,11 @@ pub struct SqliteCursor<'c, 'q> {
     pub(super) source: ConnectionSource<'c, SqliteConnection>,
     query: &'q str,
     arguments: Option<SqliteArguments>,
+
+    // None = No statement yet
+    // Some(None) = Not a persistent statement
+    // Some(Some(_)) = Persistent statement, value is key into vec
+    #[allow(clippy::option_option)]
     pub(super) statement: Option<Option<usize>>,
 }
 
