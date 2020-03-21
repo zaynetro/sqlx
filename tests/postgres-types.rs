@@ -308,7 +308,7 @@ async fn test_prepared_anonymous_record() -> anyhow::Result<()> {
     assert_eq!((rec.0).1, "");
 
     // Tuple with a string with an interior comma
-    let rec: ((bool, String),) = sqlx::query_as("SELECT (true,'Hello, World!')")
+    let rec: ((bool, &str),) = sqlx::query_as("SELECT (true,'Hello, World!')")
         .fetch_one(&mut conn)
         .await?;
 
