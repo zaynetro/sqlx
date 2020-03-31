@@ -32,7 +32,6 @@ impl MsSqlStream {
         })
     }
 
-    #[inline]
     pub(super) async fn send<T>(&mut self, packet: T, initial: bool) -> crate::Result<()>
     where
         T: Encode + std::fmt::Debug,
@@ -41,12 +40,10 @@ impl MsSqlStream {
         self.flush().await
     }
 
-    #[inline]
     pub(super) async fn flush(&mut self) -> crate::Result<()> {
         Ok(self.stream.flush().await?)
     }
 
-    /// Write the packet to the buffered stream ( do not send to the server )
     pub(super) fn write<T>(&mut self, packet: T)
     where
         T: Encode,
@@ -55,7 +52,6 @@ impl MsSqlStream {
         packet.encode(buf);
     }
 
-    #[inline]
     pub(super) async fn receive(&mut self) -> crate::Result<&Vec<u8>> {
         self.read().await?;
 
