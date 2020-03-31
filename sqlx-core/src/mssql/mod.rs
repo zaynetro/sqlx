@@ -18,7 +18,6 @@ mod cursor;
 mod database;
 mod error;
 mod executor;
-pub(crate) mod message;
 mod protocol;
 mod row;
 mod stream;

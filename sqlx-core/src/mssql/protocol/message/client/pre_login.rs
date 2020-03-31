@@ -1,9 +1,11 @@
 use crate::io::{Buf, BufMut};
-use crate::mssql::protocol::Encode;
+use crate::mssql::protocol::{Decode, Encode, PacketType};
 use bitflags::bitflags;
 use byteorder::BigEndian;
 use std::borrow::Cow;
 use uuid::Uuid;
+
+// TODO: Remove the Vec/slice and just use struct fields
 
 const TERMINATOR: u8 = 0xFF;
 
@@ -16,7 +18,7 @@ pub struct PreLogin<'a> {
     pub options: Cow<'a, [PreLoginOption<'a>]>,
 }
 
-impl<'de> PreLogin<'de> {
+impl<'de> Decode<'de> for PreLogin<'de> {
     fn decode(mut buf: &'de [u8]) -> crate::Result<Self> {
         let mut version = None;
         let mut options = Vec::<PreLoginOption<'de>>::new();
@@ -80,6 +82,11 @@ impl<'de> PreLogin<'de> {
 }
 
 impl Encode for PreLogin<'_> {
+    #[inline]
+    fn r#type() -> PacketType {
+        PacketType::PreLogin
+    }
+
     fn encode(&self, buf: &mut Vec<u8>) {
         // NOTE: Packet headers are written in MsSqlStream::write
 
@@ -239,7 +246,7 @@ impl PreLoginOption<'_> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Version {
     pub major: u8,
     pub minor: u8,

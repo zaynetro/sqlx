@@ -1,24 +1,16 @@
 use std::net::Shutdown;
 
-use byteorder::{ByteOrder, LittleEndian};
+use byteorder::{BigEndian, ByteOrder, LittleEndian};
 
 use crate::io::{Buf, BufMut, BufStream, MaybeTlsStream};
-use crate::mssql::protocol::{Encode, PacketHeader, Prelogin};
+use crate::mssql::protocol::{Decode, Encode, PacketHeader, PacketType, Status};
 use crate::mssql::MsSql;
 use crate::mssql::MsSqlError;
 use crate::url::Url;
 
-// Size before a packet is split
-const MAX_PACKET_SIZE: u32 = 1024;
-
 pub(crate) struct MsSqlStream {
-    pub(super) stream: BufStream<MaybeTlsStream>,
-
-    // Is the stream ready to send commands
-    // Put another way, are we still expecting an EOF or OK packet to terminate
-    pub(super) is_ready: bool,
-
-    pub(super) packet: Vec<u8>,
+    stream: BufStream<MaybeTlsStream>,
+    packet: usize,
 }
 
 impl MsSqlStream {
@@ -27,14 +19,13 @@ impl MsSqlStream {
 
         Ok(Self {
             stream: BufStream::new(stream),
-            is_ready: true,
-            packet: Vec::new(),
+            packet: 0,
         })
     }
 
-    pub(super) async fn send<T>(&mut self, packet: T, initial: bool) -> crate::Result<()>
+    pub(super) async fn send<T>(&mut self, packet: T) -> crate::Result<()>
     where
-        T: Encode + std::fmt::Debug,
+        T: Encode,
     {
         self.write(packet);
         self.flush().await
@@ -48,34 +39,80 @@ impl MsSqlStream {
     where
         T: Encode,
     {
+        // TODO: Support packet chunking for large packet sizes
+
         let buf = self.stream.buffer_mut();
+
+        // The way PacketHeader is handled here is we encode the entire packet header right away.
+        // Then after encoding the packet itself we take the entire length of what we wrote,
+        // including the packet header itself. At the end we simply index into the buffer and write
+        // over the length. To put it simply, we reserve space for the header and then overwrite the
+        // length after the packet has been written.
+        let offset = PacketHeader {
+            r#type: T::r#type(),
+            status: Status::END_OF_MESSAGE,
+            length: 0,
+            server_process_id: 0,
+            packet_id: 1,
+            window: 0,
+        }
+        .encode(buf);
+
+        // Encode the packet data
         packet.encode(buf);
+
+        // Emplace the length of the packet into the header
+        let len = buf.len();
+        BigEndian::write_u16(&mut buf[offset..offset + 2], len as u16);
     }
 
-    pub(super) async fn receive(&mut self) -> crate::Result<&Vec<u8>> {
-        self.read().await?;
+    pub(super) async fn receive<'s, T>(&'s mut self) -> crate::Result<T>
+    where
+        T: Decode<'s>,
+    {
+        let ty = self.read().await?;
 
-        Ok(&self.packet)
+        match ty {
+            PacketType::TabularResult => T::decode(self.packet()),
+
+            ty => Err(protocol_err!("unexpected packet type {:?}", ty).into()),
+        }
     }
 
-    pub(super) async fn read(&mut self) -> crate::Result<()> {
-        let header = self.stream.peek(8_usize).await?;
-        dbg!(&header);
+    #[inline]
+    pub(super) fn decode<'s, T>(&'s self) -> crate::Result<T>
+    where
+        T: Decode<'s>,
+    {
+        T::decode(self.packet())
+    }
 
-        let header = PacketHeader::read(header.clone())?;
-        dbg!(&header);
+    pub(super) async fn read(&mut self) -> crate::Result<PacketType> {
+        if self.packet > 0 {
+            // If there is any data in our packet buffer we need to make sure we flush that
+            // so reading will return the *next* message
+            self.stream.consume(self.packet);
+            self.packet = 0;
+        }
 
-        let length = header.length;
+        let header = self.stream.peek(8).await?;
+        let header = PacketHeader::decode(header)?;
 
+        eprintln!("read[header]: {:?}", header);
+
+        self.packet = (header.length as usize) - 8;
         self.stream.consume(8);
 
-        let payload = self.stream.peek(18).await?;
-        dbg!(payload);
+        // Wait until there is enough data in the stream.
+        let _ = self.stream.peek(self.packet).await?;
 
-        self.packet = payload.to_vec();
+        eprintln!("read: {:?}", crate::io::ByteStr(self.packet()));
 
-        self.stream.consume(length as usize);
+        Ok(header.r#type)
+    }
 
-        Ok(())
+    #[inline]
+    pub(super) fn packet(&self) -> &[u8] {
+        &self.stream.buffer()[..(self.packet as usize)]
     }
 }
