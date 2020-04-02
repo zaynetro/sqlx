@@ -106,19 +106,17 @@ impl Encode for Login7<'_> {
 
         // [OffsetLength] pre-allocate a space for all offset, length pairs
         let mut offsets = buf.len();
-        // buf.advance(58);
-        buf.extend_from_slice(&[0; 58]);
-        println!("offset start at {:x?} and end at {:x?}", offsets, buf.len());
+        buf.advance(58);
 
         // [Hostname] The client machine name
-        encode_str(buf, &mut offsets, beg, self.hostname);
+        write_str(buf, &mut offsets, beg, self.hostname);
 
         // [UserName] The client user ID
-        encode_str(buf, &mut offsets, beg, self.username);
+        write_str(buf, &mut offsets, beg, self.username);
 
         // [Password] The password supplied by the client
         let password_start = buf.len();
-        encode_str(buf, &mut offsets, beg, self.password);
+        write_str(buf, &mut offsets, beg, self.password);
 
         // Before submitting a password from the client to the server, for every byte in the
         // password buffer starting with the position pointed to by ibPassword or
@@ -130,39 +128,39 @@ impl Encode for Login7<'_> {
         }
 
         // [AppName] The client application name
-        encode_str(buf, &mut offsets, beg, self.app_name);
+        write_str(buf, &mut offsets, beg, self.app_name);
 
         // [ServerName] The server name
-        encode_str(buf, &mut offsets, beg, self.server_name);
+        write_str(buf, &mut offsets, beg, self.server_name);
 
         // [Extension] Points to an extension block.
         // TODO: Implement to get FeatureExt which should let us use UTF-8
-        encode_offset(buf, &mut offsets, beg);
+        write_offset(buf, &mut offsets, beg);
         offsets += 2;
 
         // [CltIntName] The interface library name
-        encode_str(buf, &mut offsets, beg, self.client_interface_name);
+        write_str(buf, &mut offsets, beg, self.client_interface_name);
 
         // [Language] The initial language (overrides the user IDs language)
-        encode_str(buf, &mut offsets, beg, self.language);
+        write_str(buf, &mut offsets, beg, self.language);
 
         // [Database] The initial database (overrides the user IDs database)
-        encode_str(buf, &mut offsets, beg, self.database);
+        write_str(buf, &mut offsets, beg, self.database);
 
         // [ClientID] The unique client ID. Can be all zero.
         buf[offsets..(offsets + 6)].copy_from_slice(&self.client_id);
         offsets += 6;
 
         // [SSPI] SSPI data
-        encode_offset(buf, &mut offsets, beg);
+        write_offset(buf, &mut offsets, beg);
         offsets += 2;
 
         // [AtchDBFile] The file name for a database that is to be attached
-        encode_offset(buf, &mut offsets, beg);
+        write_offset(buf, &mut offsets, beg);
         offsets += 2;
 
         // [ChangePassword] New password for the specified login
-        encode_offset(buf, &mut offsets, beg);
+        write_offset(buf, &mut offsets, beg);
         offsets += 2;
 
         // [SSPILong] Used for large SSPI data
@@ -174,7 +172,7 @@ impl Encode for Login7<'_> {
     }
 }
 
-fn encode_offset(buf: &mut Vec<u8>, offsets: &mut usize, beg: usize) {
+fn write_offset(buf: &mut Vec<u8>, offsets: &mut usize, beg: usize) {
     // The offset must be relative to the beginning of the packet payload, after
     // the packet header
 
@@ -184,9 +182,9 @@ fn encode_offset(buf: &mut Vec<u8>, offsets: &mut usize, beg: usize) {
     *offsets += 2;
 }
 
-fn encode_str(buf: &mut Vec<u8>, offsets: &mut usize, beg: usize, s: &str) {
+fn write_str(buf: &mut Vec<u8>, offsets: &mut usize, beg: usize, s: &str) {
     // Write the offset
-    encode_offset(buf, offsets, beg);
+    write_offset(buf, offsets, beg);
 
     // Write the length, in UCS-2 characters
     buf[*offsets..(*offsets + 2)].copy_from_slice(&(s.len() as u16).to_le_bytes());
