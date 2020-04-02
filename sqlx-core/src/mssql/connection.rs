@@ -1,9 +1,7 @@
 use crate::connection::{Connect, Connection};
 use crate::executor::Executor;
 use crate::mssql::protocol::message::client::login::Login7;
-use crate::mssql::protocol::message::client::pre_login::{
-    Encrypt, PreLogin, PreLoginOption, Version,
-};
+use crate::mssql::protocol::message::client::pre_login::{Encrypt, PreLogin, Version};
 use crate::mssql::protocol::PacketType;
 use crate::mssql::stream::MsSqlStream;
 use crate::mssql::MsSql;
@@ -53,7 +51,9 @@ async fn establish(stream: &mut MsSqlStream, url: &Url) -> crate::Result<()> {
     stream
         .send(PreLogin {
             version: Version::default(),
-            options: Cow::Borrowed(&[PreLoginOption::Encryption(Encrypt::NOT_SUPPORTED)]),
+            encryption: Encrypt::NOT_SUPPORTED,
+
+            ..Default::default()
         })
         .await?;
 

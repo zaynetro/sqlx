@@ -1,27 +1,37 @@
 use crate::io::{Buf, BufMut};
+use crate::mssql::protocol::message::client::pre_login::PreLoginOptionToken::Encryption;
 use crate::mssql::protocol::{Decode, Encode, PacketType};
 use bitflags::bitflags;
 use byteorder::BigEndian;
 use std::borrow::Cow;
 use uuid::Uuid;
 
-// TODO: Remove the Vec/slice and just use struct fields
-
 const TERMINATOR: u8 = 0xFF;
 
 /// A message sent by the client to set up context for login. The server responds to a client
 /// `PRELOGIN` message with a message of packet header type `0x04` and the packet data
 /// containing a `PRELOGIN` structure.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct PreLogin<'a> {
     pub version: Version,
-    pub options: Cow<'a, [PreLoginOption<'a>]>,
+    pub encryption: Encrypt,
+    pub instance: Option<&'a str>,
+    pub thread_id: Option<u32>,
+    pub trace_id: Option<TraceId>,
+    pub multiple_active_result_sets: Option<bool>,
 }
 
 impl<'de> Decode<'de> for PreLogin<'de> {
     fn decode(mut buf: &'de [u8]) -> crate::Result<Self> {
         let mut version = None;
-        let mut options = Vec::<PreLoginOption<'de>>::new();
+        let mut encryption = None;
+
+        // TODO: Decode the remainder of the structure
+        // let mut instance = None;
+        // let mut thread_id = None;
+        // let mut trace_id = None;
+        // let mut multiple_active_result_sets = None;
+
         let mut offsets = buf;
 
         loop {
@@ -49,9 +59,7 @@ impl<'de> Decode<'de> for PreLogin<'de> {
                         }
 
                         PreLoginOptionToken::Encryption => {
-                            options.push(PreLoginOption::Encryption(Encrypt::from_bits_truncate(
-                                data.get_u8()?,
-                            )));
+                            encryption = Some(Encrypt::from_bits_truncate(data.get_u8()?));
                         }
 
                         tok => todo!("{:?}", tok),
@@ -72,11 +80,17 @@ impl<'de> Decode<'de> for PreLogin<'de> {
             }
         }
 
-        let version = version.ok_or(protocol_err!("PRELOGIN: missing required VERSION option"))?;
+        let version =
+            version.ok_or(protocol_err!("PRELOGIN: missing required `version` option"))?;
+
+        let encryption = encryption.ok_or(protocol_err!(
+            "PRELOGIN: missing required `encryption` option"
+        ))?;
 
         Ok(Self {
             version,
-            options: Cow::Owned(options),
+            encryption,
+            ..Default::default()
         })
     }
 }
@@ -88,32 +102,60 @@ impl Encode for PreLogin<'_> {
     }
 
     fn encode(&self, buf: &mut Vec<u8>) {
+        use PreLoginOptionToken::*;
+
         // NOTE: Packet headers are written in MsSqlStream::write
 
         // Rules
         //  PRELOGIN = (*PRELOGIN_OPTION *PL_OPTION_DATA) / SSL_PAYLOAD
         //  PRELOGIN_OPTION = (PL_OPTION_TOKEN PL_OFFSET PL_OPTION_LENGTH) / TERMINATOR
 
-        // Offset must refer to the position after all options are encoded
-        // This can easily be computed by getting the length of the options + 1 because the
-        // version token is separate. Additionally there is one more byte for the terminator.
-        let mut offset = ((self.options.len() + 1) * 5 + 1) as u16;
+        // Count the number of set options
+        let num_options = 2
+            + self.instance.map_or(0, |_| 1)
+            + self.thread_id.map_or(0, |_| 1)
+            + self.trace_id.as_ref().map_or(0, |_| 1)
+            + self.multiple_active_result_sets.map_or(0, |_| 1);
 
-        // NOTE: VERSION is a required token, and it MUST be the
-        //       first token sent as part of PRELOGIN.
-        PreLoginOptionToken::Version.encode(buf, &mut offset, 6);
+        // Calculate the length of the option offset block. Each block is 5 bytes and it ends in
+        // a 1 byte terminator.
+        let len_offsets = (num_options * 5) + 1;
+        let mut offsets = buf.len() as usize;
+        let mut offset = len_offsets as u16;
 
-        for opt in &*self.options {
-            opt.token().encode(buf, &mut offset, opt.size());
-        }
+        // Reserve a chunk for the offset block and set the final terminator
+        buf.advance(len_offsets);
+        let end_offsets = buf.len() - 1;
+        buf[end_offsets] = TERMINATOR;
 
-        // TERMINATOR ends the sequence of PRELOGIN_OPTION
-        buf.push(TERMINATOR);
-
+        // NOTE: VERSION is a required token, and it MUST be the first token.
+        Version.encode(buf, &mut offsets, &mut offset, 6);
         self.version.encode(buf);
 
-        for opt in &*self.options {
-            opt.encode(buf);
+        Encryption.encode(buf, &mut offsets, &mut offset, 1);
+        buf.push(self.encryption.bits());
+
+        if let Some(name) = self.instance {
+            Instance.encode(buf, &mut offsets, &mut offset, name.len() as u16 + 1);
+            buf.extend_from_slice(name.as_bytes());
+            buf.push(b'\0');
+        }
+
+        if let Some(id) = self.thread_id {
+            ThreadId.encode(buf, &mut offsets, &mut offset, 4);
+            buf.extend_from_slice(&id.to_le_bytes());
+        }
+
+        if let Some(trace) = &self.trace_id {
+            ThreadId.encode(buf, &mut offsets, &mut offset, 36);
+            buf.extend_from_slice(trace.connection_id.as_bytes());
+            buf.extend_from_slice(trace.activity_id.as_bytes());
+            buf.extend_from_slice(&trace.activity_seq.to_be_bytes());
+        }
+
+        if let Some(mars) = &self.multiple_active_result_sets {
+            MultipleActiveResultSets.encode(buf, &mut offsets, &mut offset, 1);
+            buf.push(*mars as u8);
         }
     }
 }
@@ -130,10 +172,15 @@ enum PreLoginOptionToken {
 }
 
 impl PreLoginOptionToken {
-    fn encode(self, buf: &mut Vec<u8>, offset: &mut u16, len: u16) {
-        buf.push(self as u8);
-        buf.put_u16::<BigEndian>(*offset);
-        buf.put_u16::<BigEndian>(len);
+    fn encode(self, buf: &mut Vec<u8>, pos: &mut usize, offset: &mut u16, len: u16) {
+        buf[*pos] = self as u8;
+        *pos += 1;
+
+        buf[*pos..(*pos + 2)].copy_from_slice(&offset.to_be_bytes());
+        *pos += 2;
+
+        buf[*pos..(*pos + 2)].copy_from_slice(&len.to_be_bytes());
+        *pos += 2;
 
         *offset += len;
     }
@@ -157,6 +204,7 @@ impl PreLoginOptionToken {
 bitflags! {
     /// During the Pre-Login handshake, the client and the server negotiate the
     /// wire encryption to be used.
+    #[derive(Default)]
     pub struct Encrypt: u8 {
         /// Encryption is available but on.
         const ON = 0x01;
@@ -173,77 +221,11 @@ bitflags! {
     }
 }
 
-#[derive(Debug, Clone)]
-pub enum PreLoginOption<'a> {
-    Encryption(Encrypt),
-
-    /// Name of the instance of the database server.
-    Instance(&'a str),
-
-    ThreadId(u32),
-
-    TraceId {
-        connection_id: Uuid,
-        activity_id: Uuid,
-        activity_seq: u32,
-    },
-
-    MultipleActiveResultSets(bool),
-}
-
-impl PreLoginOption<'_> {
-    fn encode(&self, buf: &mut Vec<u8>) {
-        match self {
-            PreLoginOption::Encryption(encrypt) => {
-                buf.push(encrypt.bits());
-            }
-
-            PreLoginOption::Instance(name) => {
-                buf.extend_from_slice(name.as_bytes());
-                buf.push(b'\0');
-            }
-
-            PreLoginOption::MultipleActiveResultSets(enabled) => {
-                buf.push(*enabled as u8);
-            }
-
-            PreLoginOption::ThreadId(id) => {
-                buf.put_u32::<BigEndian>(*id);
-            }
-
-            PreLoginOption::TraceId {
-                connection_id,
-                activity_id,
-                activity_seq,
-            } => {
-                buf.extend_from_slice(connection_id.as_bytes());
-                buf.extend_from_slice(activity_id.as_bytes());
-                buf.put_u32::<BigEndian>(*activity_seq);
-            }
-        }
-    }
-
-    fn token(&self) -> PreLoginOptionToken {
-        match self {
-            PreLoginOption::Encryption(_) => PreLoginOptionToken::Encryption,
-            PreLoginOption::Instance(_) => PreLoginOptionToken::Instance,
-            PreLoginOption::ThreadId(_) => PreLoginOptionToken::ThreadId,
-            PreLoginOption::TraceId { .. } => PreLoginOptionToken::TraceId,
-            PreLoginOption::MultipleActiveResultSets(_) => {
-                PreLoginOptionToken::MultipleActiveResultSets
-            }
-        }
-    }
-
-    fn size(&self) -> u16 {
-        match self {
-            PreLoginOption::Encryption(_) => 1,
-            PreLoginOption::Instance(name) => name.len() as u16 + 1,
-            PreLoginOption::ThreadId(_) => 4,
-            PreLoginOption::TraceId { .. } => 36,
-            PreLoginOption::MultipleActiveResultSets(_) => 1,
-        }
-    }
+#[derive(Debug)]
+pub struct TraceId {
+    pub connection_id: Uuid,
+    pub activity_id: Uuid,
+    pub activity_seq: u32,
 }
 
 #[derive(Debug, Default)]
@@ -275,12 +257,11 @@ fn test_encode_pre_login() {
             build: 0,
             sub_build: 0,
         },
-        options: Cow::Borrowed(&[
-            PreLoginOption::Encryption(Encrypt::ON),
-            PreLoginOption::Instance(""),
-            PreLoginOption::ThreadId(0xB80D0000),
-            PreLoginOption::MultipleActiveResultSets(true),
-        ]),
+        encryption: Encrypt::ON,
+        instance: Some(""),
+        thread_id: Some(0x00000DB8),
+        multiple_active_result_sets: Some(true),
+        ..Default::default()
     };
 
     // From v20191101 of MS-TDS
@@ -314,8 +295,5 @@ fn test_decode_pre_login() {
     assert_eq!(pre_login.version.sub_build, 0);
 
     // ENCRYPT_OFF
-    assert!(matches!(
-        pre_login.options[0],
-        PreLoginOption::Encryption(enc) if enc.is_empty()
-    ));
+    assert_eq!(pre_login.encryption.bits(), 0);
 }
