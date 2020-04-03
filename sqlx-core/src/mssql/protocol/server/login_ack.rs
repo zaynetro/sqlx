@@ -6,10 +6,10 @@ use byteorder::{BigEndian, LittleEndian};
 
 #[derive(Debug)]
 pub struct LoginAck {
-    interface: u8,
-    tds_version: u32,
-    program_name: String,
-    program_version: Version,
+    pub interface: u8,
+    pub tds_version: u32,
+    pub program_name: String,
+    pub program_version: Version,
 }
 
 impl Decode<'_> for LoginAck {

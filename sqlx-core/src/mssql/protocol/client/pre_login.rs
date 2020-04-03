@@ -3,6 +3,7 @@ use crate::mssql::protocol::{Decode, Encode, PacketType};
 use bitflags::bitflags;
 use byteorder::BigEndian;
 use std::borrow::Cow;
+use std::fmt::{self, Display, Formatter};
 use uuid::Uuid;
 
 const TERMINATOR: u8 = 0xFF;
@@ -241,6 +242,12 @@ impl Version {
         buf.push(self.minor);
         buf.put_u16::<BigEndian>(self.build);
         buf.put_u16::<BigEndian>(self.sub_build);
+    }
+}
+
+impl Display for Version {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        write!(f, "v{}.{}.{}", self.major, self.minor, self.build)
     }
 }
 

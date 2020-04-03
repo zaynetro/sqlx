@@ -88,35 +88,28 @@ async fn establish(stream: &mut MsSqlStream, url: &Url) -> crate::Result<()> {
         })
         .await?;
 
+    // Wait until a DONE message
     while let Some(ty) = stream.next().await? {
         match ty {
-            MessageType::EnvChange => {
-                let env_change = EnvChange::decode(stream.message())?;
-
-                println!("recv: env change => {:?}", env_change);
-            }
-
-            MessageType::Info => {
-                let info = Info::decode(stream.message())?;
-
-                println!("recv: info => {:?}", info);
-            }
-
             MessageType::LoginAck => {
                 let ack = LoginAck::decode(stream.message())?;
 
-                println!("recv: ack => {:?}", ack);
+                log::trace!(
+                    "established connection to {} {}",
+                    ack.program_name,
+                    ack.program_version
+                );
             }
 
             MessageType::Done => {
-                let ack = Done::decode(stream.message())?;
+                break;
+            }
 
-                println!("recv: done => {:?}", ack);
+            ty => {
+                return Err(protocol_err!("login: unexpected message {:?}", ty).into());
             }
         }
     }
-
-    todo!();
 
     Ok(())
 }

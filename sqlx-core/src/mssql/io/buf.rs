@@ -11,12 +11,6 @@ pub trait BufExt<'a>: Buf<'a> {
 
         while n > 0 {
             let ch = self.get_u16::<LittleEndian>()?;
-
-            if n == 1 && ch == 0 {
-                // suppress a trailing zero
-                break;
-            }
-
             raw.push(ch);
             n -= 1;
         }

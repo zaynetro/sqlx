@@ -68,26 +68,6 @@ impl MsSqlStream {
         BigEndian::write_u16(&mut buf[offset..offset + 2], len as u16);
     }
 
-    // pub(super) async fn receive(&mut self) -> crate::Result<server::Message> {
-    //     if self.message.is_none() {
-    //         // Read the next packet if there is no more data to encode
-    //         self.read().await?;
-    //
-    //         if self.packet.0 != PacketType::TabularResult {
-    //             // Receiving _messages_ only works for TabularResult packets
-    //             return Err(protocol_err!(
-    //                 "unexpected packet type {:?}, expecting TabularResult",
-    //                 self.packet.0
-    //             )
-    //             .into());
-    //         }
-    //     }
-    //
-    //     let message = server::Message::try_from_u8(self.packet()[0])?;
-    //
-    //     Ok(message)
-    // }
-
     // Receive an object directly from the packet
     // Otherwise known as a token-less stream
     // The caller must know what it is going to receive
@@ -100,34 +80,64 @@ impl MsSqlStream {
         T::decode(self.packet())
     }
 
+    // Drop any pending tokens and packets
+    pub(crate) fn clear(&mut self) {
+        if self.packet.1 > 0 {
+            self.stream.consume(self.packet.1);
+            self.packet.1 = 0;
+        }
+
+        self.message = None;
+    }
+
     // Receive the next token from a token stream
     pub(crate) async fn next(&mut self) -> crate::Result<Option<MessageType>> {
-        if let Some((_, size)) = self.message.take() {
-            // Consume the packet stream by <size>
-            self.stream.consume(size);
-            self.packet.1 -= size;
-        } else {
-            // We have no message, this means that there is no
-            // token stream currently being read
-            self.read().await?;
+        loop {
+            if let Some((ty, size)) = self.message.take() {
+                if matches!(ty, MessageType::Done) {
+                    // TODO: Use bitflags to check if this the FINAL DONE token
+                    // If this is the FINAL done token, we should immediately flush
+                    self.clear();
+                    continue;
+                }
+
+                // Consume the packet stream by <size>
+                self.stream.consume(size);
+                self.packet.1 -= size;
+            } else {
+                // We have no message, this means that there is no
+                // token stream currently being read
+                self.read().await?;
+            }
+
+            if self.packet.1 == 0 {
+                // No more data left in _this_ token stream
+                return Ok(None);
+            }
+
+            // Decode the type and size of next message in the stream
+            let message_ty = MessageType::try_from_u8(self.packet()[0])?;
+
+            self.stream.consume(1);
+            self.packet.1 -= 1;
+
+            let message_size = message_ty.size(&mut self.stream, &mut self.packet.1)?;
+
+            self.message = Some((message_ty, message_size as usize));
+
+            match message_ty {
+                MessageType::EnvChange | MessageType::Info => {
+                    // Ignore ENV_CHANGE and INFO
+                    //  ENV_CHANGE tells us when a server variable is changing
+                    //  INFO I believe is intended for us to emit as a log
+                    continue;
+                }
+
+                _ => {}
+            }
+
+            return Ok(Some(message_ty));
         }
-
-        if self.packet.1 == 0 {
-            // No more data left in _this_ token stream
-            return Ok(None);
-        }
-
-        // Decode the type and size of next message in the stream
-        let message_ty = MessageType::try_from_u8(self.packet()[0])?;
-
-        self.stream.consume(1);
-        self.packet.1 -= 1;
-
-        let message_size = message_ty.size(&mut self.stream, &mut self.packet.1)?;
-
-        self.message = Some((message_ty, message_size as usize));
-
-        Ok(Some(message_ty))
     }
 
     async fn read(&mut self) -> crate::Result<()> {
