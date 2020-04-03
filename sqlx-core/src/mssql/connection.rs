@@ -1,8 +1,8 @@
 use crate::connection::{Connect, Connection};
 use crate::executor::Executor;
-use crate::mssql::protocol::message::client::login::Login7;
-use crate::mssql::protocol::message::client::pre_login::{Encrypt, PreLogin, Version};
-use crate::mssql::protocol::PacketType;
+use crate::mssql::protocol::client::login::Login7;
+use crate::mssql::protocol::client::pre_login::{Encrypt, PreLogin, Version};
+use crate::mssql::protocol::{Decode, MessageType};
 use crate::mssql::stream::MsSqlStream;
 use crate::mssql::MsSql;
 use crate::url::Url;
@@ -84,33 +84,11 @@ async fn establish(stream: &mut MsSqlStream, url: &Url) -> crate::Result<()> {
         })
         .await?;
 
-    let ty = stream.read().await?;
-
-    // TODO: Handle token streams
-    //       The MsSqlStream class should emit messages from a packet
-
-    log::trace!("received {:?} - {:?}", ty, stream.packet());
+    while let Some(message) = stream.next().await? {
+        log::trace!("recv {:?}", message);
+    }
 
     todo!();
-
-    // let packet = stream.receive().await?;
-    // let prelogin_resp = Prelogin::read(packet)?;
-    // dbg!(prelogin_resp);
-    //
-    // let login = Login {
-    //     hostname: "",
-    //     username: "",
-    //     password: "",
-    //     servername: "",
-    //     database: "",
-    //     appname: "",
-    //     ctlintname: "",
-    // };
-    //
-    // stream.write(login);
-    // stream.flush().await?;
-    //
-    // let packet = stream.receive().await?;
 
     Ok(())
 }

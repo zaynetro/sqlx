@@ -1,5 +1,4 @@
 use crate::io::{Buf, BufMut};
-use crate::mssql::protocol::message::client::pre_login::PreLoginOptionToken::Encryption;
 use crate::mssql::protocol::{Decode, Encode, PacketType};
 use bitflags::bitflags;
 use byteorder::BigEndian;

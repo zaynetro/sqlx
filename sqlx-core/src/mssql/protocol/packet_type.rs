@@ -1,16 +1,19 @@
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, PartialEq, Clone)]
 pub enum PacketType {
-    SqlBatch = 1,
+    // Pre-login. Should always be #18 unless we decide to try and support pre 7.0 TDS
     PreTds7Login = 2,
+    PreLogin = 18,
+
+    SqlBatch = 1,
     Rpc = 3,
-    TabularResult = 4,
     AttentionSignal = 6,
     BulkLoadData = 7,
     FederatedAuthToken = 8,
     TransactionManagerRequest = 14,
     Tds7Login = 16,
     Sspi = 17,
-    PreLogin = 18,
+
+    TabularResult = 4,
 }
 
 impl PacketType {

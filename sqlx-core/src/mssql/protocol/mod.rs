@@ -1,14 +1,13 @@
-// mod login;
-pub mod message;
+pub mod client;
+mod message_type;
 mod packet_header;
 mod packet_type;
+pub mod server;
 mod status;
-// mod prelogin;
 
-// pub use login::Login;
+pub use message_type::MessageType;
 pub use packet_header::PacketHeader;
 pub use packet_type::PacketType;
-// pub use prelogin::{Encryption, Prelogin, PreloginOption, Version};
 pub use status::Status;
 
 pub trait Encode {
