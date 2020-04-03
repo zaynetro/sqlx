@@ -2,6 +2,10 @@ use crate::connection::{Connect, Connection};
 use crate::executor::Executor;
 use crate::mssql::protocol::client::login::Login7;
 use crate::mssql::protocol::client::pre_login::{Encrypt, PreLogin, Version};
+use crate::mssql::protocol::server::done::Done;
+use crate::mssql::protocol::server::env_change::EnvChange;
+use crate::mssql::protocol::server::info::Info;
+use crate::mssql::protocol::server::login_ack::LoginAck;
 use crate::mssql::protocol::{Decode, MessageType};
 use crate::mssql::stream::MsSqlStream;
 use crate::mssql::MsSql;
@@ -84,8 +88,32 @@ async fn establish(stream: &mut MsSqlStream, url: &Url) -> crate::Result<()> {
         })
         .await?;
 
-    while let Some(message) = stream.next().await? {
-        log::trace!("recv {:?}", message);
+    while let Some(ty) = stream.next().await? {
+        match ty {
+            MessageType::EnvChange => {
+                let env_change = EnvChange::decode(stream.message())?;
+
+                println!("recv: env change => {:?}", env_change);
+            }
+
+            MessageType::Info => {
+                let info = Info::decode(stream.message())?;
+
+                println!("recv: info => {:?}", info);
+            }
+
+            MessageType::LoginAck => {
+                let ack = LoginAck::decode(stream.message())?;
+
+                println!("recv: ack => {:?}", ack);
+            }
+
+            MessageType::Done => {
+                let ack = Done::decode(stream.message())?;
+
+                println!("recv: done => {:?}", ack);
+            }
+        }
     }
 
     todo!();

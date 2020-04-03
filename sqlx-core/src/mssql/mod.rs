@@ -18,6 +18,7 @@ mod cursor;
 mod database;
 mod error;
 mod executor;
+mod io;
 mod protocol;
 mod row;
 mod stream;
