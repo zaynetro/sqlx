@@ -1,4 +1,4 @@
-use sqlx::{Connection, Executor, MsSql};
+use sqlx::MsSql;
 use sqlx_test::new;
 
 #[cfg_attr(feature = "runtime-async-std", async_std::test)]
