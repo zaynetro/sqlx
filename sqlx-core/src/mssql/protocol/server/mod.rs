@@ -13,6 +13,7 @@ pub mod fed_auth_info;
 pub mod info;
 pub mod login_ack;
 pub mod offset;
+pub mod order;
 pub mod type_info;
 pub mod xml_info;
 
