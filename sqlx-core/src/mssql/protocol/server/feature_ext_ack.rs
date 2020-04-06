@@ -1,6 +1,7 @@
 use crate::io::Buf;
 use crate::mssql::io::BufExt;
 use crate::mssql::protocol::client::pre_login::Version;
+use crate::mssql::protocol::server::feature::Feature;
 use crate::mssql::protocol::Decode;
 use bitflags::bitflags;
 use byteorder::{BigEndian, LittleEndian};
@@ -35,14 +36,14 @@ pub struct FeatureExtOpt<'a> {
     data_len: u32,
     // The acknowledge data of a specific feature. Each feature SHOULD define its own data format
     // in the FEATUREEXTACK token if it is selected to acknowledge the feature.
-    data: &'a [u8],
+    data: Feature<'a>,
 }
 
 impl<'a> Decode<'a> for FeatureExtOpt<'a> {
     fn decode(mut buf: &'a [u8]) -> crate::Result<Self> {
         let id = buf.get_u8()?;
         let data_len = buf.get_u32::<LittleEndian>()?;
-        let data = &buf[0..data_len as usize];
+        let data = Feature::decode(&buf[..data_len as usize])?;
 
         Ok(Self { id, data_len, data })
     }
