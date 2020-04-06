@@ -5,30 +5,63 @@ use crate::mssql::protocol::Decode;
 use bitflags::bitflags;
 use byteorder::{BigEndian, LittleEndian};
 
+// Token Stream Function:
+//      Describes the data type, length, and name of column data that result from a SQL statement
+//      that generates totals.
+//
+// Token Stream Comments:
+//      The token value is 0x88.
+//      This token is used to tell the client the data type and length of the column data.
+//      It describes the format of the data found in an ALTROW data stream. ALTMETADATA and the
+//      corresponding ALTROW MUST be in the same result set.
+//
+// All ALTMETADATA data streams are grouped.
+//
+// A preceding COLMETADATA MUST exist before an ALTMETADATA token. There might be COLINFO and
+// TABNAME streams between COLMETADATA and ALTMETADATA.
+//
+// Note: ALTMETADATA was deprecated in TDS 7.4.
+//
 // ALTMETADATA =
-//  TokenType
-//  Count
-//  Id
-//  ByCols
-//  *(<ByCols> ColNum)
-//  1*ComputeData
+//      TokenType
+//      Count
+//      Id
+//      ByCols
+//      *(<ByCols> ColNum)
+//      1*ComputeData
 #[derive(Debug)]
 pub struct AltMetaData {
+    // The count of columns (number of aggregate operators) in the token stream.
     count: u16,
+    // The Id of the SQL statement to which the total column formats apply. Each ALTMETADATA token
+    // MUST have its own unique Id in the same result set. This Id lets the client correctly
+    // interpret later ALTROW data streams.
     id: u16,
+    // The number of grouping columns in the SQL statement that generates totals. For example,
+    // the SQL clause compute count(sales) by year, month, division, departmenthas four grouping columns.
     by_cols: u8,
+    // USHORT specifying the column number as it appears in the COMPUTE clause. ColNum appears ByCols times.
     columns: Vec<(u8, u16)>,
     compute_data: Vec<ComputeData>,
 }
 
 #[derive(Debug)]
 pub struct ComputeData {
+    // The type of aggregate operator.
     op: Op,
+    // The column number, starting from 1, in the result set that is the operand to the aggregate operator.
     operand: u16,
+    // The user type ID of the data type of the column. Depending on the TDS version that is used,
+    // valid values are 0x0000 or 0x00000000, with the exceptions of data type
+    // TIMESTAMP (0x0050 or 0x00000050) and alias types (greater than 0x00FF or 0x000000FF).
     user_type: u32,
+    // With the exception of fNullable, all of these bit flags SHOULD be set to zero.
     flags: Flags,
     type_info: TypeInfo,
+    // See section 2.2.7.4 for a description of TableName. This field SHOULD never be sent because
+    // SQL statements that generate totals exclude NTEXT/TEXT/IMAGE.
     table_name: Option<Vec<String>>,
+    // The column name. Contains the column name length and column name.
     col_name: String,
 }
 
@@ -39,6 +72,8 @@ impl Decode<'_> for ComputeData {
         let user_type = buf.get_u32::<LittleEndian>()?;
         let flags = Flags::from_bits_truncate(buf.get_u16::<LittleEndian>()?);
         let type_info = TypeInfo::decode(buf)?;
+
+        // TableName should never be sent.
         let table_name = if type_info.has_table_name() {
             let num_parts = buf.get_u8()?;
 
