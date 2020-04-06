@@ -12,6 +12,7 @@ pub mod feature_ext_ack;
 pub mod fed_auth_info;
 pub mod info;
 pub mod login_ack;
+pub mod offset;
 pub mod type_info;
 pub mod xml_info;
 
