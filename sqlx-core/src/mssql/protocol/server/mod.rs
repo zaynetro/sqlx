@@ -15,6 +15,7 @@ pub mod login_ack;
 pub mod offset;
 pub mod order;
 pub mod return_status;
+pub mod return_value;
 pub mod type_info;
 pub mod xml_info;
 
