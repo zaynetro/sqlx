@@ -24,8 +24,6 @@ use byteorder::{BigEndian, LittleEndian};
 //          LineNumber
 #[derive(Debug)]
 pub struct Error {
-    // The total length of the ERROR data stream, in bytes.
-    length: u16,
     // The error number
     number: i32,
     // The error state, used as a modifier to the error number.
@@ -47,7 +45,6 @@ pub struct Error {
 
 impl Decode<'_> for Error {
     fn decode(mut buf: &[u8]) -> crate::Result<Self> {
-        let length = buf.get_u16::<LittleEndian>()?;
         let number = buf.get_i32::<LittleEndian>()?;
         let state = buf.get_u8()?;
         let class = buf.get_u8()?;
@@ -57,7 +54,6 @@ impl Decode<'_> for Error {
         let line_number = buf.get_i32::<LittleEndian>()?;
 
         Ok(Self {
-            length,
             number,
             state,
             class,
