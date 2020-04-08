@@ -1,10 +1,10 @@
 use crate::connection::{Connect, Connection};
 use crate::executor::Executor;
-use crate::mssql::protocol::server::error::Error;
 use crate::mssql::protocol::client::login::Login7;
 use crate::mssql::protocol::client::pre_login::{Encrypt, PreLogin, Version};
 use crate::mssql::protocol::server::done::Done;
 use crate::mssql::protocol::server::env_change::EnvChange;
+use crate::mssql::protocol::server::error::Error;
 use crate::mssql::protocol::server::info::Info;
 use crate::mssql::protocol::server::login_ack::LoginAck;
 use crate::mssql::protocol::{Decode, MessageType};

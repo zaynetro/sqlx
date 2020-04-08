@@ -35,16 +35,10 @@ impl MessageType {
     ) -> crate::Result<u16> {
         Ok(match self {
             // Most messages encode the size as an immediate USHORT
-            MessageType::Error => {
-                let size = stream.buffer().read_u16::<LittleEndian>()?;
-
-                stream.consume(0);
-                *packet -= 2;
-
-                size
-            }
-
-            MessageType::EnvChange | MessageType::Info | MessageType::LoginAck => {
+            MessageType::Error
+            | MessageType::EnvChange
+            | MessageType::Info
+            | MessageType::LoginAck => {
                 let size = stream.buffer().read_u16::<LittleEndian>()?;
 
                 stream.consume(2);
