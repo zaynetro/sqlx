@@ -9,6 +9,7 @@ pub trait BufExt<'a>: Buf<'a> {
     fn get_utf16_str(&mut self, mut n: usize) -> io::Result<String> {
         let mut raw = Vec::with_capacity(n * 2);
 
+        let orig = n.clone();
         while n > 0 {
             let ch = self.get_u16::<LittleEndian>()?;
             raw.push(ch);

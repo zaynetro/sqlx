@@ -27,7 +27,12 @@ impl<'c, 'q> Cursor<'c, 'q> for MsSqlCursor<'c, 'q> {
         Self: Sized,
         E: Execute<'q, MsSql>,
     {
-        todo!()
+        Self {
+            source: ConnectionSource::Pool(pool.clone()),
+            query: Some(query.into_parts()),
+            column_names: Arc::default(),
+            binary: true,
+        }
     }
 
     #[doc(hidden)]
@@ -36,7 +41,12 @@ impl<'c, 'q> Cursor<'c, 'q> for MsSqlCursor<'c, 'q> {
         Self: Sized,
         E: Execute<'q, MsSql>,
     {
-        todo!()
+        Self {
+            source: ConnectionSource::ConnectionRef(conn),
+            query: Some(query.into_parts()),
+            column_names: Arc::default(),
+            binary: true,
+        }
     }
 
     fn next(&mut self) -> BoxFuture<crate::Result<Option<MsSqlRow<'_>>>> {

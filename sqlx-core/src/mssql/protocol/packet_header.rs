@@ -8,11 +8,11 @@ use byteorder::LittleEndian;
 
 #[derive(Debug)]
 pub struct PacketHeader {
-    // Type defines the type of message. Typeis a 1-byte unsigned char. The following table
+    // Type defines the type of message. Type is a 1-byte unsigned char. The following table
     // describes the types that are available.
     pub r#type: PacketType,
 
-    // Status is a bit field used to indicate the message state. Statusis a 1-byte unsigned char.
+    // Status is a bit field used to indicate the message state. Status is a 1-byte unsigned char.
     pub status: Status,
 
     // Length is the size of the packet including the 8 bytes in the packet header.
@@ -23,7 +23,7 @@ pub struct PacketHeader {
 
     // Packet ID is used for numbering message packets that contain data in addition to the packet
     // header. Packet ID is a 1-byte, unsigned char. Each time packet data is sent, the value of
-    // PacketIDis incremented by 1, modulo 256. This allows the receiver to track the sequence
+    // PacketID is incremented by 1, modulo 256. This allows the receiver to track the sequence
     // of TDS packets for a given message. This value is currently ignored.
     pub packet_id: u8,
 

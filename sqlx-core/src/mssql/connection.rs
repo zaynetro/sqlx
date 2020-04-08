@@ -1,5 +1,6 @@
 use crate::connection::{Connect, Connection};
 use crate::executor::Executor;
+use crate::mssql::protocol::server::error::Error;
 use crate::mssql::protocol::client::login::Login7;
 use crate::mssql::protocol::client::pre_login::{Encrypt, PreLogin, Version};
 use crate::mssql::protocol::server::done::Done;
@@ -91,6 +92,10 @@ async fn establish(stream: &mut MsSqlStream, url: &Url) -> crate::Result<()> {
     // Wait until a DONE message
     while let Some(ty) = stream.next().await? {
         match ty {
+            MessageType::Error => {
+                let err = Error::decode(stream.message())?;
+            }
+
             MessageType::LoginAck => {
                 let ack = LoginAck::decode(stream.message())?;
 

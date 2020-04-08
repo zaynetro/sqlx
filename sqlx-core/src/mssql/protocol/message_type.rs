@@ -1,10 +1,12 @@
 use crate::io::{BufStream, MaybeTlsStream};
 use byteorder::{LittleEndian, ReadBytesExt};
+use std::io::Cursor;
 
 #[derive(Debug, Copy, Clone)]
 pub enum MessageType {
     Info,
     EnvChange,
+    Error,
     Done,
     LoginAck,
 }
@@ -12,6 +14,7 @@ pub enum MessageType {
 impl MessageType {
     pub(crate) fn try_from_u8(ty: u8) -> crate::Result<Self> {
         Ok(match ty {
+            0xaa => MessageType::Error,
             0xab => MessageType::Info,
             0xad => MessageType::LoginAck,
             0xe3 => MessageType::EnvChange,
@@ -32,6 +35,15 @@ impl MessageType {
     ) -> crate::Result<u16> {
         Ok(match self {
             // Most messages encode the size as an immediate USHORT
+            MessageType::Error => {
+                let size = stream.buffer().read_u16::<LittleEndian>()?;
+
+                stream.consume(0);
+                *packet -= 2;
+
+                size
+            }
+
             MessageType::EnvChange | MessageType::Info | MessageType::LoginAck => {
                 let size = stream.buffer().read_u16::<LittleEndian>()?;
 
