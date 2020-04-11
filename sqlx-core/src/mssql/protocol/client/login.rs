@@ -1,4 +1,5 @@
 use crate::io::BufMut;
+use crate::mssql::io::BufMutExt;
 use crate::mssql::protocol::{Encode, PacketType};
 use bitflags::_core::convert::identity;
 use byteorder::{BigEndian, ByteOrder, LittleEndian};
@@ -191,7 +192,7 @@ fn write_str(buf: &mut Vec<u8>, offsets: &mut usize, beg: usize, s: &str) {
     *offsets += 2;
 
     // Encode the character sequence as UCS-2 (precursor to UTF16-LE)
-    ucs2::encode_with(s, |ch| Ok(buf.put_u16::<LittleEndian>(ch)));
+    buf.put_utf16_str(s);
 }
 
 #[cfg(test)]
