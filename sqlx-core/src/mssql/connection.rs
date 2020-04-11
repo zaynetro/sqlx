@@ -16,9 +16,7 @@ use std::borrow::Cow;
 use std::convert::TryInto;
 
 pub struct MsSqlConnection {
-    // pub(super) stream: MsSqlStream,
-// pub(super) is_ready: bool,
-// pub(super) cache_statement: HashMap<Box<str>, u32>,
+    pub(super) stream: MsSqlStream,
 }
 
 impl MsSqlConnection {
@@ -28,7 +26,7 @@ impl MsSqlConnection {
 
         establish(&mut stream, &url).await?;
 
-        Ok(MsSqlConnection {})
+        Ok(Self { stream })
     }
 }
 
@@ -43,10 +41,12 @@ impl Connect for MsSqlConnection {
 }
 
 impl Connection for MsSqlConnection {
+    // TODO: close
     fn close(self) -> BoxFuture<'static, crate::Result<()>> {
         Box::pin(async move { Ok(()) })
     }
 
+    // TODO: ping
     fn ping(&mut self) -> BoxFuture<crate::Result<()>> {
         Box::pin(async move { Ok(()) })
     }
