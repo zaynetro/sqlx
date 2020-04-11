@@ -25,22 +25,22 @@ use byteorder::{BigEndian, LittleEndian};
 #[derive(Debug)]
 pub struct Error {
     // The error number
-    number: i32,
+    pub number: i32,
     // The error state, used as a modifier to the error number.
-    state: u8,
+    pub state: u8,
     // The class (severity) of the error. A class of less than 10 indicates
     // an informational message.
-    class: u8,
+    pub class: u8,
     // The message text length and message text using US_VARCHAR format.
-    msg_text: String,
+    pub msg_text: String,
     // The server name length and server name using B_VARCHAR format
-    server_name: String,
+    pub server_name: String,
     // The stored procedurename length and the stored procedure name using B_VARCHAR format
-    proc_name: String,
+    pub proc_name: String,
     // The line number in the SQL batch or stored procedure that caused the error. Line numbers
     // begin at 1. If the line number is not applicable to the message, the
     // value of LineNumber is 0.
-    line_number: i32,
+    pub line_number: i32,
 }
 
 impl Decode<'_> for Error {

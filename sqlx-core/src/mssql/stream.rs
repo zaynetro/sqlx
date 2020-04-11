@@ -3,6 +3,7 @@ use std::net::Shutdown;
 use byteorder::{BigEndian, ByteOrder, LittleEndian};
 
 use crate::io::{Buf, BufMut, BufStream, MaybeTlsStream};
+use crate::mssql::protocol::server::error::Error;
 use crate::mssql::protocol::{Decode, Encode, MessageType, PacketHeader, PacketType, Status};
 use crate::mssql::MsSql;
 use crate::mssql::MsSqlError;
@@ -131,6 +132,13 @@ impl MsSqlStream {
                     //  ENV_CHANGE tells us when a server variable is changing
                     //  INFO I believe is intended for us to emit as a log
                     continue;
+                }
+
+                MessageType::Error => {
+                    // Received an ERROR message
+                    // This can be anything from a protocol misstep to the SQL query is invalid
+                    let error = Error::decode(self.message())?;
+                    return Err(MsSqlError(error).into());
                 }
 
                 _ => {}

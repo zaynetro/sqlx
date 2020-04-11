@@ -1,38 +1,15 @@
 use super::MsSql;
 use crate::error::DatabaseError;
-use std::error::{Error as StdError, Error};
+use crate::mssql::protocol::server::error::Error;
+use std::error::Error as StdError;
 use std::fmt::{self, Display};
 
 #[derive(Debug)]
-pub struct MsSqlError {}
+pub struct MsSqlError(pub(crate) Error);
 
 impl DatabaseError for MsSqlError {
     fn message(&self) -> &str {
-        todo!()
-    }
-
-    fn code(&self) -> Option<&str> {
-        todo!()
-    }
-
-    fn details(&self) -> Option<&str> {
-        todo!()
-    }
-
-    fn hint(&self) -> Option<&str> {
-        todo!()
-    }
-
-    fn table_name(&self) -> Option<&str> {
-        todo!()
-    }
-
-    fn column_name(&self) -> Option<&str> {
-        todo!()
-    }
-
-    fn constraint_name(&self) -> Option<&str> {
-        todo!()
+        &self.0.msg_text
     }
 
     fn as_ref_err(&self) -> &(dyn StdError + Send + Sync + 'static) {
@@ -50,7 +27,7 @@ impl DatabaseError for MsSqlError {
 
 impl Display for MsSqlError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        todo!()
+        f.write_str(self.message())
     }
 }
 
