@@ -51,6 +51,12 @@ pub enum DataType {
     SsVariant = 0x62,
 }
 
+impl Default for DataType {
+    fn default() -> Self {
+        Self::Null
+    }
+}
+
 impl DataType {
     pub fn decode(value: u8) -> crate::Result<Self> {
         Ok(match value {
@@ -106,67 +112,67 @@ impl DataType {
 
 impl DataType {
     pub fn is_fixed_len(&self) -> bool {
-        match self {
-            DataType::Null => true,
-            DataType::Int1 => true,
-            DataType::Big => true,
-            DataType::Int2 => true,
-            DataType::Int4 => true,
-            DataType::DateTime4 => true,
-            DataType::Float4 => true,
-            DataType::Money => true,
-            DataType::DateTime => true,
-            DataType::Float8 => true,
-            DataType::Money4 => true,
-            _ => false,
-        }
+        matches!(
+            self,
+            DataType::Null
+                | DataType::Int1
+                | DataType::Big
+                | DataType::Int2
+                | DataType::Int4
+                | DataType::DateTime4
+                | DataType::Float4
+                | DataType::Money
+                | DataType::DateTime
+                | DataType::Float8
+                | DataType::Money4
+        )
     }
 
     pub fn is_bytelen(&self) -> bool {
-        match self {
-            DataType::Guid => true,
-            DataType::IntN => true,
-            DataType::Decimal => true,
-            DataType::Numeric => true,
-            DataType::BitN => true,
-            DataType::DecimalN => true,
-            DataType::NumericN => true,
-            DataType::FloatN => true,
-            DataType::MoneyN => true,
-            DataType::DateTimeN => true,
-            DataType::DateN => true,
-            DataType::TimeN => true,
-            DataType::DateTime2N => true,
-            DataType::DateTimeOffsetN => true,
-            DataType::Char => true,
-            DataType::VarChar => true,
-            DataType::Binary => true,
-            DataType::VarBinary => true,
-            _ => false,
-        }
+        matches!(
+            self,
+            DataType::Guid
+                | DataType::IntN
+                | DataType::Decimal
+                | DataType::Numeric
+                | DataType::BitN
+                | DataType::DecimalN
+                | DataType::NumericN
+                | DataType::FloatN
+                | DataType::MoneyN
+                | DataType::DateTimeN
+                | DataType::DateN
+                | DataType::TimeN
+                | DataType::DateTime2N
+                | DataType::DateTimeOffsetN
+                | DataType::Char
+                | DataType::VarChar
+                | DataType::Binary
+                | DataType::VarBinary
+        )
     }
 
     pub fn is_ushort_len(&self) -> bool {
-        match self {
-            DataType::BigVarBinary => true,
-            DataType::BigVarChar => true,
-            DataType::BigBinary => true,
-            DataType::BigChar => true,
-            DataType::NVarChar => true,
-            DataType::NChar => true,
-            _ => true,
-        }
+        matches!(
+            self,
+            DataType::BigVarBinary
+                | DataType::BigVarChar
+                | DataType::BigBinary
+                | DataType::BigChar
+                | DataType::NVarChar
+                | DataType::NChar
+        )
     }
 
     pub fn is_long_len(&self) -> bool {
-        match self {
-            DataType::Xml => true,
-            DataType::Text => true,
-            DataType::Image => true,
-            DataType::NText => true,
-            DataType::SsVariant => true,
-            _ => false,
-        }
+        matches!(
+            self,
+            DataType::Xml
+                | DataType::Text
+                | DataType::Image
+                | DataType::NText
+                | DataType::SsVariant
+        )
     }
 
     pub fn is_var_len(&self) -> bool {
@@ -174,45 +180,40 @@ impl DataType {
     }
 
     pub fn part_len(&self) -> bool {
-        match self {
-            DataType::Xml => true,
-            DataType::BigVarChar => true,
-            DataType::BigVarBinary => true,
-            DataType::NVarChar => true,
-            DataType::Udt => true,
-            _ => false,
-        }
+        matches!(
+            self,
+            DataType::Xml
+                | DataType::BigVarChar
+                | DataType::BigVarBinary
+                | DataType::NVarChar
+                | DataType::Udt
+        )
     }
 
     pub fn has_collation(&self) -> bool {
-        match self {
-            DataType::BigChar => true,
-            DataType::BigVarChar => true,
-            DataType::Text => true,
-            DataType::NText => true,
-            DataType::NChar => true,
-            DataType::NVarChar => true,
-            _ => false,
-        }
+        matches!(
+            self,
+            DataType::BigChar
+                | DataType::BigVarChar
+                | DataType::Text
+                | DataType::NText
+                | DataType::NChar
+                | DataType::NVarChar
+        )
     }
 
     pub fn has_precision_and_scale(&self) -> bool {
-        match self {
-            DataType::Numeric => true,
-            DataType::NumericN => true,
-            DataType::Decimal => true,
-            DataType::DecimalN => true,
-            _ => false,
-        }
+        matches!(
+            self,
+            DataType::Numeric | DataType::NumericN | DataType::Decimal | DataType::DecimalN
+        )
     }
 
     pub fn has_only_scale(&self) -> bool {
-        match self {
-            DataType::TimeN => true,
-            DataType::DateTime2N => true,
-            DataType::DateTimeOffsetN => true,
-            _ => false,
-        }
+        matches!(
+            self,
+            DataType::TimeN | DataType::DateTime2N | DataType::DateTimeOffsetN
+        )
     }
 
     pub fn scale_to_len(&self, scale: u8) -> u8 {
@@ -238,11 +239,22 @@ impl DataType {
     }
 
     pub fn has_table_name(&self) -> bool {
-        match self {
-            DataType::Text => true,
-            DataType::NText => true,
-            DataType::Image => true,
-            _ => false,
-        }
+        matches!(self, DataType::Text | DataType::NText | DataType::Image)
+    }
+
+    pub fn is_charbin_null(&self) -> bool {
+        matches!(
+            self,
+            DataType::BigChar
+                | DataType::BigVarChar
+                | DataType::NChar
+                | DataType::NVarChar
+                | DataType::BigBinary
+                | DataType::BigVarBinary
+        )
+    }
+
+    pub fn fixed_len(&self) -> usize {
+        todo!()
     }
 }

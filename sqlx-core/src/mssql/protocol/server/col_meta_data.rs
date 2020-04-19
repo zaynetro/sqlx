@@ -151,7 +151,7 @@ impl Decode<'_> for ColumnData {
         let user_type = buf.get_u32::<LittleEndian>()?;
         let flags = Flags::from_bits_truncate(buf.get_u16::<LittleEndian>()?);
         let type_info = TypeInfo::decode(buf)?;
-        let table_name = if type_info.has_table_name() {
+        let table_name = if type_info.r#type.has_table_name() {
             let num_parts = buf.get_u8()?;
             let mut parts = Vec::new();
 
